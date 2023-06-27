@@ -11,9 +11,10 @@ CREATE OR REPLACE PROCEDURE array_date(days_list days_array, months_list months_
     invalid_month EXCEPTION;
 
     -- VARIABLES TO HOLD THE DATE
-    day_in_week VARCHAR2(15 CHAR);
-    year        NUMBER := TO_NUMBER(EXTRACT(YEAR FROM SYSDATE));
-    target_date DATE;
+    day_in_week       VARCHAR2(15 CHAR);
+    year              NUMBER := TO_NUMBER(EXTRACT(YEAR FROM SYSDATE));
+    target_date       DATE;
+    last_day_of_month NUMBER;
 BEGIN
     -- GET SIZE OF TWO ARRAYS
     -- IF THE DAYS ARRAY HAS MORE THAN 31 VALUES
@@ -37,12 +38,12 @@ BEGIN
             IF (months_list(i) <= 0 OR months_list(i) > 12) THEN
                 RAISE invalid_month;
             END IF;
-
+            last_day_of_month := TO_NUMBER((EXTRACT(DAY FROM LAST_DAY((EXTRACT(YEAR FROM SYSDATE)) || '-' ||
+                                                                      (months_list(i)) || '-' ||
+                                                                      (1)))));
             FOR j in days_list.FIRST..days_list.LAST
                 LOOP
-                    IF (days_list(j) > TO_NUMBER((EXTRACT(DAY FROM LAST_DAY((EXTRACT(YEAR FROM SYSDATE)) || '-' ||
-                                                                            (months_list(i)) || '-' ||
-                                                                            (days_list(j))))))) THEN
+                    IF (days_list(j) > last_day_of_month) THEN
                         RAISE invalid_day;
                     END IF;
                     target_date := TO_DATE(
