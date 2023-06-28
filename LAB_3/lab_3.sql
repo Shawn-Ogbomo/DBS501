@@ -1,6 +1,7 @@
-CREATE TYPE days_array AS varray(31) OF INTEGER;
-CREATE TYPE months_array AS varray(12) OF INTEGER;
-CREATE OR REPLACE PROCEDURE array_date(days_list days_array, months_list months_array)
+-- SET SERVEROUTPUT ON;
+ CREATE OR REPLACE TYPE int_array IS VARRAY(31) OF INTEGER;
+
+CREATE OR REPLACE PROCEDURE array_date(days_list int_array, months_list int_array)
     IS
     days_limit   NUMBER := 31;
     months_limit NUMBER := 12;
@@ -31,9 +32,11 @@ BEGIN
         RAISE too_many_months;
     END IF;
 
--- TRAVERSE THE ARRAY OF DAYS AND MONTHS AND EVALUATE EACH INDEX AGAINST THE INVARIANT TO GET THE DATE
+    -- TRAVERSE THE ARRAY OF DAYS AND MONTHS.
+-- EVALUATE EACH INDEX AGAINST THE INVARIANT TO GET THE DATE
+-- IF SUCCESSFUL, DISPLAY THE APPROPRIATE DATE ON THECONSOLE.
 
-    FOR i in months_list.FIRST..months_list.LAST
+    FOR i in 1..months_list.LAST
         LOOP
             IF (months_list(i) <= 0 OR months_list(i) > 12) THEN
                 RAISE invalid_month;
@@ -74,6 +77,7 @@ EXCEPTION
         OTHERS THEN DBMS_OUTPUT.put_line('Oops something went wrong...' || CHR(10));
 END;
 
+--2 + 80
 BEGIN
-    array_date((1, 5, 7), (2, 4));
+    array_date((1, 4, 5, 6), (11, 5, 6, 7));
 END;
