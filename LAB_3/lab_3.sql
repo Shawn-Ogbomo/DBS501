@@ -1,5 +1,5 @@
 -- SET SERVEROUTPUT ON;
- CREATE OR REPLACE TYPE int_array IS VARRAY(31) OF INTEGER;
+CREATE OR REPLACE TYPE int_array IS VARRAY(31) OF INTEGER;
 
 CREATE OR REPLACE PROCEDURE array_date(days_list int_array, months_list int_array)
     IS
@@ -20,7 +20,6 @@ BEGIN
     -- GET SIZE OF TWO ARRAYS
     -- IF THE DAYS ARRAY HAS MORE THAN 31 VALUES
     -- THROW AN EXCEPTION
-
     IF (days_list.COUNT >= days_limit) THEN
         RAISE too_many_days;
     END IF;
@@ -34,29 +33,30 @@ BEGIN
 
     -- TRAVERSE THE ARRAY OF DAYS AND MONTHS.
 -- EVALUATE EACH INDEX AGAINST THE INVARIANT TO GET THE DATE
--- IF SUCCESSFUL, DISPLAY THE APPROPRIATE DATE ON THECONSOLE.
+-- IF SUCCESSFUL, DISPLAY THE APPROPRIATE DATE ON THE CONSOLE.
 
-    FOR i in 1..months_list.LAST
+    FOR i in months_list.FIRST..months_list.LAST
         LOOP
             IF (months_list(i) <= 0 OR months_list(i) > 12) THEN
                 RAISE invalid_month;
             END IF;
-            last_day_of_month := TO_NUMBER((EXTRACT(DAY FROM LAST_DAY((EXTRACT(YEAR FROM SYSDATE)) || '-' ||
-                                                                      (months_list(i)) || '-' ||
-                                                                      (1)))));
+            last_day_of_month := TO_NUMBER(extract(DAY FROM LAST_DAY(TO_DATE(
+                    TO_CHAR('1' || ' ' || TO_CHAR(TO_DATE(months_list(i), 'MM'), 'MON') || ' ' || TO_CHAR(year)),
+                    'DD MON YYYY'))));
+
             FOR j in days_list.FIRST..days_list.LAST
                 LOOP
                     IF (days_list(j) > last_day_of_month) THEN
                         RAISE invalid_day;
                     END IF;
+
                     target_date := TO_DATE(
-                                TO_CHAR(TO_DATE(months_list(months_list(i)), 'MM'), 'MON') || ' ' ||
-                                days_list(j) || ' ' ||
-                                year, 'MON DD YYYY');
+                                TO_CHAR(days_list(j)) || ' ' || TO_CHAR(TO_DATE(months_list(i), 'MM'), 'MON') || ' ' ||
+                                TO_CHAR(year), 'DD MM YYYY');
+
                     day_in_week := TO_CHAR(target_date, 'DAY');
                     DBMS_OUTPUT.put_line(day_in_week || ', ' || TO_CHAR(target_date, 'Month') || ' ' || days_list(j) ||
-                                         ', ' || year ||
-                                         CHR(10));
+                                         ', ' || year || CHR(10));
                 END LOOP;
         END LOOP;
 
@@ -77,7 +77,12 @@ EXCEPTION
         OTHERS THEN DBMS_OUTPUT.put_line('Oops something went wrong...' || CHR(10));
 END;
 
---2 + 80
-BEGIN
-    array_date((1, 4, 5, 6), (11, 5, 6, 7));
+DECLARE
+    days   int_array;
+    months int_array;
+--     months int_array := (11, 5, 6, 7);
+BEGIN -- 2+ 80
+    days := int_array(1, 5, 7);
+    months := int_array(2, 4);
+    array_date(days, months);
 END;
