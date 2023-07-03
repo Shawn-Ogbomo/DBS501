@@ -136,7 +136,6 @@ BEGIN
 
     FOR emp_lname in emp_lastname_cursor
         LOOP
-            DBMS_OUTPUT.PUT_LINE('outer');
             first_letter_lname := SUBSTR(emp_lname.LAST_NAME, 1, 1);
             IF first_letter_lname != 'A' AND first_letter_lname != 'E' AND first_letter_lname != 'I'
                 AND first_letter_lname != 'O' AND first_letter_lname != 'U' THEN
@@ -152,8 +151,6 @@ BEGIN
                     END LOOP;
                 --  SET RIGHT PAD THE STRING WITH + TILL THE COUNT IS 15
                 emp_lname.LAST_NAME := RPAD(emp_lname.LAST_NAME, 15, '+');
-                DBMS_OUTPUT.PUT_LINE(emp_lname.LAST_NAME);
-                DBMS_OUTPUT.PUT_LINE('inner');
             END IF;
         END LOOP;
 EXCEPTION
