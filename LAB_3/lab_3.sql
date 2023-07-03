@@ -1,4 +1,17 @@
 -- SET SERVEROUTPUT ON;
+--QUESTION 1
+-- Write a stored procedure called array_date that takes in as input up to 31
+-- numbers in an array – and – an array of up to 12 numbers and then returns the
+-- day of the week for each day in the first array for each month in the second
+-- array. For instance:
+-- If I call array_date([1, 5, 7], [2, 4]) the output would be:
+-- Tuesday, February 1, 2022
+-- Saturday, February 5, 2022
+-- Monday, February 7, 2022
+-- Friday, April 1, 2022
+-- Tuesday, April 5, 2022
+-- Thursday, April 7, 2022
+
 CREATE OR REPLACE TYPE int_array IS VARRAY(31) OF INTEGER;
 
 CREATE OR REPLACE PROCEDURE array_date(days_list int_array, months_list int_array)
@@ -80,9 +93,74 @@ END;
 DECLARE
     days   int_array;
     months int_array;
---     months int_array := (11, 5, 6, 7);
 BEGIN -- 2+ 80
     days := int_array(1, 5, 7);
     months := int_array(2, 4);
     array_date(days, months);
+END;
+
+
+-- --QUESTION 2
+-- Write a stored procedure called name_fun which will go through each
+-- last_name in the employees table and do the following:
+-- - If the name starts with a vowel – ignore the name (use CASE function)
+-- - If the name does not being with a vowel – replace all vowels in the name with
+-- a ’*’
+-- - Right pad each name with a ‘+’ so that each name printed as 15 characters in
+-- total
+-- Example:
+-- Adamson – would be ignored
+-- Smith – would become Sm*th++++++++++
+
+
+CREATE OR REPLACE PROCEDURE name_fun
+    IS
+    -- CREATE A CURSOR TO TRAVERSE THE EMPLOYEE TABLE
+-- CURSOR SAME TYPE AS EMPLOYEE NAME COLUMN
+    CURSOR emp_lastname_cursor
+        IS
+        SELECT LAST_NAME
+        FROM EMPLOYEES;
+    --CREATE A VARIABLE TO HOLD THE FIRST CHARACTER OF THE LAST NAME
+    first_letter_lname CHAR;
+BEGIN
+    -- USE ITERATION TO TRAVERSE THE EMPLOYEE TABLE
+    -- SWITCH THE FIRST LETTER
+    -- SWITCH THE FIRST CHARACTER IN THE LAST NAME
+    --IF
+    --CASE A || E || I || O || U
+    -- REPLACE ALL OF THE VOWELS WITH AN *      USE REPLACE
+    -- RIGHT PAD + TO THE NED OF THE STRING UNTIL THE TOTAL EMPLOYEE LASTNAME COUNT IS 15
+    -- DISPLAY THE LAST NAME WITH THE CHANGES
+    --ELSE SKIP THE NAME GO TO THE NEXT RECORD
+
+    FOR emp_lname in emp_lastname_cursor
+        LOOP
+            DBMS_OUTPUT.PUT_LINE('outer');
+            first_letter_lname := SUBSTR(emp_lname.LAST_NAME, 1, 1);
+            IF first_letter_lname != 'A' AND first_letter_lname != 'E' AND first_letter_lname != 'I'
+                AND first_letter_lname != 'O' AND first_letter_lname != 'U' THEN
+                FOR i in 2..LENGTH(emp_lname.LAST_NAME) --Payne
+                    LOOP
+                        CASE SUBSTR(emp_lname.LAST_NAME, i, 1)
+                            WHEN 'a' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'a', '*');
+                            WHEN 'e' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'e', '*');
+                            WHEN 'i' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'i', '*');
+                            WHEN 'o' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'o', '*');
+                            WHEN 'u' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'u', '*');
+                            END CASE;
+                    END LOOP;
+                --  SET RIGHT PAD THE STRING WITH + TILL THE COUNT IS 15
+                emp_lname.LAST_NAME := RPAD(emp_lname.LAST_NAME, 15, '+');
+                DBMS_OUTPUT.PUT_LINE(emp_lname.LAST_NAME);
+                DBMS_OUTPUT.PUT_LINE('inner');
+            END IF;
+        END LOOP;
+EXCEPTION
+    WHEN
+        OTHERS THEN DBMS_OUTPUT.put_line('Oops something went wrong...' || CHR(10));
+END;
+
+BEGIN
+    name_fun();
 END;
