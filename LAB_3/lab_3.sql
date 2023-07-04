@@ -113,14 +113,53 @@ END;
 -- Smith – would become Sm*th++++++++++
 
 
+--CREATE PROCEDURE TO UPDATE THE LASTNAME IN THE EMPLOYEES TABLE
+
+CREATE OR REPLACE PROCEDURE replace_string(string_in IN OUT VARCHAR2, vowel IN CHAR)
+    IS
+    --HOLDS STRING BEFORE MODIFICATION
+    string_previous VARCHAR2(12);
+BEGIN
+    string_previous := string_in;
+    string_in := REPLACE(string_in, vowel, '*');
+
+    --UPDATE THE RECORD RECORD IN THE TABLE THAT MATCHES THE INCOMING STRING
+    UPDATE
+        EMPLOYEES
+    SET LAST_NAME = string_in
+    WHERE LAST_NAME = string_previous;
+EXCEPTION
+    WHEN
+        OTHERS THEN DBMS_OUTPUT.put_line('Oops something went wrong...' || CHR(10));
+END;
+
+
+CREATE OR REPLACE PROCEDURE PAD_RIGHT(string_in IN OUT VARCHAR2, sz IN NUMBER, delimiter IN CHAR)
+    IS
+    string_previous VARCHAR2(12);
+BEGIN
+    string_previous := string_in;
+    string_in := RPAD(string_in, sz, delimiter);
+
+    UPDATE
+        EMPLOYEES
+    SET LAST_NAME = string_in
+    WHERE LAST_NAME = string_previous;
+EXCEPTION
+    WHEN
+        OTHERS THEN DBMS_OUTPUT.put_line('Oops something went wrong...' || CHR(10));
+END;
+
+
 CREATE OR REPLACE PROCEDURE name_fun
     IS
     -- CREATE A CURSOR TO TRAVERSE THE EMPLOYEE TABLE
--- CURSOR SAME TYPE AS EMPLOYEE NAME COLUMN
     CURSOR emp_lastname_cursor
         IS
         SELECT LAST_NAME
-        FROM EMPLOYEES;
+        FROM EMPLOYEES
+        ORDER BY LAST_NAME
+            FOR UPDATE OF LAST_NAME;
     --CREATE A VARIABLE TO HOLD THE FIRST CHARACTER OF THE LAST NAME
     first_letter_lname CHAR;
 BEGIN
@@ -128,8 +167,8 @@ BEGIN
     -- SWITCH THE FIRST LETTER
     -- SWITCH THE FIRST CHARACTER IN THE LAST NAME
     --IF
-    --CASE A || E || I || O || U
-    -- REPLACE ALL OF THE VOWELS WITH AN *      USE REPLACE
+    --CASE a || e || i || o || u
+    -- REPLACE ALL OF THE VOWELS WITH A *      USE REPLACE
     -- RIGHT PAD + TO THE NED OF THE STRING UNTIL THE TOTAL EMPLOYEE LASTNAME COUNT IS 15
     -- DISPLAY THE LAST NAME WITH THE CHANGES
     --ELSE SKIP THE NAME GO TO THE NEXT RECORD
@@ -139,18 +178,23 @@ BEGIN
             first_letter_lname := SUBSTR(emp_lname.LAST_NAME, 1, 1);
             IF first_letter_lname != 'A' AND first_letter_lname != 'E' AND first_letter_lname != 'I'
                 AND first_letter_lname != 'O' AND first_letter_lname != 'U' THEN
-                FOR i in 2..LENGTH(emp_lname.LAST_NAME) --Payne
+                FOR i in 2..LENGTH(emp_lname.LAST_NAME)
                     LOOP
+                        DBMS_OUTPUT.put_line('inner');
+                        DBMS_OUTPUT.put_line(emp_lname.LAST_NAME);
+                        DBMS_OUTPUT.put_line(SUBSTR(emp_lname.LAST_NAME, i, 1));
+
                         CASE SUBSTR(emp_lname.LAST_NAME, i, 1)
-                            WHEN 'a' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'a', '*');
-                            WHEN 'e' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'e', '*');
-                            WHEN 'i' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'i', '*');
-                            WHEN 'o' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'o', '*');
-                            WHEN 'u' THEN emp_lname.LAST_NAME := REPLACE(emp_lname.LAST_NAME, 'u', '*');
+                            WHEN 'a' THEN REPLACE_STRING(emp_lname.LAST_NAME, 'a');
+                            WHEN 'e' THEN REPLACE_STRING(emp_lname.LAST_NAME, 'e');
+                            WHEN 'i' THEN REPLACE_STRING(emp_lname.LAST_NAME, 'i');
+                            WHEN 'o' THEN REPLACE_STRING(emp_lname.LAST_NAME, 'o');
+                            WHEN 'u' THEN REPLACE_STRING(emp_lname.LAST_NAME, 'u');
+                            ELSE CONTINUE;
                             END CASE;
                     END LOOP;
                 --  SET RIGHT PAD THE STRING WITH + TILL THE COUNT IS 15
-                emp_lname.LAST_NAME := RPAD(emp_lname.LAST_NAME, 15, '+');
+                PAD_RIGHT(emp_lname.LAST_NAME, 15, '+');
             END IF;
         END LOOP;
 EXCEPTION
