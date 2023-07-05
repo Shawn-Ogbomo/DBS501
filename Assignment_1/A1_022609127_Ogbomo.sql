@@ -5,6 +5,7 @@
  Instructor Riyadh Al-Essawi
  Assignment 1*/
 
+-- SET SERVEROUTPUT ON;
 --QUESTION 1
 --EMPLOYEE ROW COUNT
 SELECT COUNT(*)
@@ -71,7 +72,9 @@ CREATE OR REPLACE PROCEDURE salary(emp_num IN NUMBER, rating IN NUMBER)
                SALARY,
                BONUS,
                COMM
-        FROM EMPLOYEE;
+        FROM EMPLOYEE
+        ORDER BY FIRSTNAME
+            FOR UPDATE OF SALARY , BONUS, COMM;
 BEGIN
     -- CHECK VALIDITY OF THE RATING
     IF (rating < 0 OR rating > max_rating) THEN
@@ -80,23 +83,72 @@ BEGIN
     END IF;
 
     --TRAVERSE THE EMPLOYEE TABLE USING CURSOR TO FIND THE TARGET EMPLOYEE NUMBER
-    FOR employee in employee_cursor
+    FOR emp in employee_cursor
         LOOP
         -- IF EMPLOYEE NUMBER MATCHES TARGET EMPLOYEE ID
         -- UPDATE THE EMPLOYEES INFO IN REGARDS TO THE RATING...
-            IF (employee.EMPNO = emp_num) THEN
+            IF (emp.EMPNO = emp_num) THEN
                 found := TRUE;
+                -- SAVE THE OLD COMPENSATION COMPONENTS
+                old_salary := emp.SALARY;
+                old_compensation := emp.COMM;
+                old_bonus := emp.BONUS;
+
+                --UPDATE THE COMPENSATION COMPONENTS
                 IF (rating = 1) THEN
                     --they receive a $10,000 salary increase.
                     -- Additional $300 in bonus.
                     -- An additional 5% of salary as commission
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.SALARY = EMPLOYEE.SALARY + 10000,
+                        EMPLOYEE.BONUS  = EMPLOYEE.BONUS + 300,
+                        EMPLOYEE.COMM   = EMPLOYEE.COMM + (old_salary * 0.05)
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT SALARY, --GET UPDATED COMPENSATION COMPONENTS INTO VARIABLES
+                           COMM,
+                           BONUS
+                    INTO
+                        new_salary,
+                        new_compensation,
+                        new_bonus
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
                 ELSIF (rating = 2) THEN
-                    --they receive a $5,000 salary
-                    -- increase, additional $200 in bonus and an additional 2% of salary
-                    -- as commission
+                    --they receive a $5,000 salary increase
+                    -- AN additional $200 in bonus
+                    -- An additional 2% of salary as commission
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.SALARY = EMPLOYEE.SALARY + 5000,
+                        EMPLOYEE.BONUS  = EMPLOYEE.BONUS + 200,
+                        EMPLOYEE.COMM   = EMPLOYEE.COMM + (old_salary * 0.02)
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT SALARY, --GET UPDATED COMPENSATION COMPONENTS INTO VARIABLES
+                           COMM,
+                           BONUS
+                    INTO
+                        new_salary,
+                        new_compensation,
+                        new_bonus
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+
                 ELSIF (rating = 3) THEN
-                    --they receive a $2,000 salary
-                    -- increase with no change to their variable pay
+                    --they receive a $2,000 salary increase with no change to their variable pay
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.SALARY = EMPLOYEE.SALARY + 2000
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT SALARY, --GET UPDATED COMPENSATION COMPONENTS INTO VARIABLES
+                           COMM,
+                           BONUS
+                    INTO
+                        new_salary,
+                        new_compensation,
+                        new_bonus
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
                 END IF;
                 EXIT;
             END IF;
@@ -106,16 +158,37 @@ BEGIN
         RAISE invalid_employee;
     END IF;
     --DISPLAY COMPENSATION COMPONENTS...
-    DBMS_OUTPUT.put_line('EMPNO: ' || emp_num || CHAR(10) ||
-                         'OLD_SALARY: ' || old_salary || CHAR(10) ||
-                         'NEW SALARY: ' || new_salary || CHAR(10) ||
-                         'OLD BONUS: ' || old_bonus || CHAR(10) ||
-                         'NEW BONUS: ' || new_bonus);
+    DBMS_OUTPUT.put_line('EMPNO: ' || emp_num || CHR(10) ||
+                         'OLD_SALARY: ' || old_salary || CHR(10) ||
+                         'NEW SALARY: ' || new_salary || CHR(10) ||
+                         'OLD BONUS: ' || old_bonus || CHR(10) ||
+                         'NEW BONUS: ' || new_bonus || CHR(10) ||
+                         'OLD COMPENSATION: ' || old_compensation || CHR(10) ||
+                         'NEW COMPENSATION: ' || new_compensation || CHR(10));
 EXCEPTION
     WHEN
-        invalid_rating THEN DBMS_OUTPUT.put_line('SALARY: Oops ' || rating || ' is an invalid rating. ' || CHAR(10) ||
+        invalid_rating THEN DBMS_OUTPUT.put_line('SALARY: Oops ' || rating || ' is an invalid rating. ' || CHR(10) ||
                                                  'Please enter a rating > 0 and <= ' || max_rating || '.');
     WHEN
-        invalid_employee THEN DBMS_OUTPUT.put_line('SALARY: Oops ' || emp_num || ' was not found. ' || CHAR(10) || '.');
+        invalid_employee THEN DBMS_OUTPUT.put_line('SALARY: Oops employee number: ' || emp_num || ' was not found. ' ||
+                                                   CHR(10) || '.');
     WHEN OTHERS THEN DBMS_OUTPUT.put_line('SALARY: Oops something went wrong...' || CHR(10));
 END;
+
+
+BEGIN
+    SALARY(000330, 1);
+    DBMS_OUTPUT.put_line(CHR(10));
+    SALARY(200010, 2);
+    DBMS_OUTPUT.put_line(CHR(10));
+    SALARY(000330, 3);
+    DBMS_OUTPUT.put_line(CHR(10));
+    SALARY(000140, 2);
+    DBMS_OUTPUT.put_line(CHR(10));
+    --INVALID
+    SALARY(000330, 75);
+    DBMS_OUTPUT.put_line(CHR(10));
+    --INVALID
+    SALARY(7777777, 2);
+--     ROLLBACK;
+END ;
