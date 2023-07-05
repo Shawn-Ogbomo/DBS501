@@ -191,4 +191,154 @@ BEGIN
     --INVALID
     SALARY(7777777, 2);
 --     ROLLBACK;
-END ;
+END;
+
+
+--QUESTION 3
+-- Write a stored procedure for the EMPLOYEE table which
+-- takes employee number and education level upgrade as input - and -
+-- increases the education level of the employee based on the input.
+-- Valid input is:
+-- - “H” (for high school diploma) – and – this will update the edlevel to 16
+-- - “C” (for college diploma) – and – this will update the edlevel to 19
+-- - “U” (for university degree) – and – this will update the edlevel to 20
+-- - “M” (for masters) – and – this will update the edlevel to 23
+-- - “P” (for PhD) – and – this will update the edlevel to 25
+--     - Make sure you handle the error condition of incorrect education
+-- level input – and – non-existent employee number
+-- - Also make sure you never reduce the existing education level of
+-- the employee. They can only stay the same or go up.
+-- - A message should be provided for all three error cases.
+-- - When no errors occur, the output should look like:
+-- - EMP OLD EDUCATION NEW EDUCATION
+-- WHAT TO HAND IN: A copy of your stored procedure and the output of
+-- the a set of calls which test all input conditions and error handling.
+-- Total of 8 calls and 8 output.
+
+CREATE OR REPLACE PROCEDURE upgrade_education_level(emp_num IN NUMBER, edu_code IN CHAR)
+    IS
+    invalid_employee EXCEPTION;
+    invalid_education_code EXCEPTION;
+    found               BOOLEAN := FALSE;
+    old_education_level EMPLOYEE.EDLEVEL %TYPE;
+    new_education_level EMPLOYEE.EDLEVEL %TYPE;
+    CURSOR employee_cursor
+        IS
+        SELECT EMPNO,
+               FIRSTNAME,
+               MIDINIT,
+               LASTNAME,
+               EDLEVEL
+        FROM EMPLOYEE
+        ORDER BY FIRSTNAME
+            FOR UPDATE OF EDLEVEL;
+BEGIN
+    IF (edu_code != 'H' AND edu_code != 'C' AND edu_code != 'U' AND edu_code != 'M' AND edu_code != 'P') THEN
+        RAISE invalid_education_code;
+    END IF;
+
+    --TRAVERSE THE EMPLOYEE TABLE USING CURSOR TO FIND THE TARGET EMPLOYEE NUMBER
+    FOR emp in employee_cursor
+        LOOP
+        -- IF EMPLOYEE NUMBER MATCHES TARGET EMPLOYEE ID
+        -- UPDATE THE EMPLOYEES INFO IN REGARDS TO THE EDU_CODE...
+            IF (emp.EMPNO = emp_num) THEN
+                found := TRUE;
+                -- SAVE THE OLD EDUCATION LEVEL
+                old_education_level := emp.EDLEVEL;
+
+                -- MATCH THE EDU_CODE TO THE CORRECT SELECTION STATEMENT...
+                IF (edu_code = 'H') THEN
+                    --“H” (for high school diploma) – and – this will update the edlevel to 16
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.EDLEVEL = 16
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT EDLEVEL --GET UPDATED EDUCATION LEVEL INTO VARIABLE
+                    INTO
+                        new_education_level
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                ELSIF (edu_code = 'C') THEN
+                    --“C” (for college diploma) – and – this will update the edlevel to 19
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.EDLEVEL = 19
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT EDLEVEL --GET UPDATED EDUCATION LEVEL INTO VARIABLE
+                    INTO
+                        new_education_level
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                ELSIF (edu_code = 'U') THEN
+                    --“U” (for university degree) – and – this will update the edlevel to 20
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.EDLEVEL = 20
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT EDLEVEL --GET UPDATED EDUCATION LEVEL INTO VARIABLE
+                    INTO
+                        new_education_level
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                ELSIF (edu_code = 'M') THEN
+                    --“M” (for masters) – and – this will update the edlevel to 23
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.EDLEVEL = 23
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT EDLEVEL --GET UPDATED EDUCATION LEVEL INTO VARIABLE
+                    INTO
+                        new_education_level
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                ELSIF (edu_code = 'P') THEN
+                    --“P” (for PhD) – and – this will update the edlevel to 25
+                    UPDATE EMPLOYEE
+                    SET EMPLOYEE.EDLEVEL = 25
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                    COMMIT; --SAVE CHANGES TO THE TABLE
+                    SELECT EDLEVEL --GET UPDATED EDUCATION LEVEL INTO VARIABLE
+                    INTO
+                        new_education_level
+                    FROM EMPLOYEE
+                    WHERE EMPLOYEE.EMPNO = emp.EMPNO;
+                END IF;
+                EXIT;
+            END IF;
+        END LOOP;
+
+    IF (NOT found) THEN
+        RAISE invalid_employee;
+    END IF;
+    -- DISPLAY EMPLOYEE, FORMER EDUCATION, AND NEW EDUCATION LEVELS
+    DBMS_OUTPUT.put_line('Employee: ' || emp_num || CHR(10) || 'OLD EDUCATION LEVEL: ' || old_education_level ||
+                         CHR(10) ||
+                         'NEW EDUCATION LEVEL: ' || new_education_level);
+
+EXCEPTION
+    WHEN
+        invalid_education_code THEN DBMS_OUTPUT.put_line('UPGRADE_EDUCATION_LEVEL: ' || edu_code
+        || ' is invalid...' || CHR(10));
+    WHEN
+        invalid_employee THEN DBMS_OUTPUT.put_line('SALARY: Oops employee number: '
+        || emp_num || ' was not found. ' ||
+                                                   CHR(10) || '.');
+    WHEN OTHERS THEN DBMS_OUTPUT.put_line('UPGRADE_EDUCATION_LEVEL: Oops something went wrong...' || CHR(10));
+END;
+
+BEGIN
+    upgrade_education_level(000330, 'H');
+    DBMS_OUTPUT.put_line(CHR(10));
+    upgrade_education_level(000330, 'C');
+    DBMS_OUTPUT.put_line(CHR(10));
+    upgrade_education_level(000330, 'U');
+    DBMS_OUTPUT.put_line(CHR(10));
+    upgrade_education_level(000330, 'M');
+    DBMS_OUTPUT.put_line(CHR(10));
+    upgrade_education_level(000330, 'P');
+    DBMS_OUTPUT.put_line(CHR(10));
+    upgrade_education_level(7777777, 'H');
+    DBMS_OUTPUT.put_line(CHR(10));
+    upgrade_education_level(000330, 'Z');
+END;
