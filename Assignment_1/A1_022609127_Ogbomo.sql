@@ -386,7 +386,7 @@ END;
 --     This stored procedure will print out the information associated with the
 --                                                                              order being added including the information above and appropriate
 -- text summarizing the order information.
-
+--ok
 
 -- add_order_item (orderId IN order_items.order_id%type,
 --  itemId IN order_items.item_id%type,
@@ -397,7 +397,7 @@ END;
 -- This procedure has five IN parameters. It stores the values of these
 -- parameters to the table order_items.
 -- This procedure needs to handle errors such as an invalid order ID
-
+-- OK
 
 -- display_order (orderId IN NUMBER)
 -- This procedure has an input parameter to receive the order ID and no
@@ -504,4 +504,42 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('Sorry the Product you are looking for does not exist...');
 EXCEPTION
     WHEN OTHERS THEN DBMS_OUTPUT.put_line('FIND_PRODUCT: Oops something went wrong...' || CHR(10));
+END;
+
+
+CREATE OR REPLACE PROCEDURE add_order(customer_id IN NUMBER, new_order_id OUT NUMBER)
+    IS
+    found NUMBER := 0;
+BEGIN
+    --SEARCH FOR THE CUSTOMER IN THE DATABASE
+    find_customer(customer_id, found);
+    --FOUND CUSTOMER
+    IF (found = 1) THEN
+        --CREATE A NEW ORDER ID, MAX + 1
+        SELECT (MAX(ORDER_ID) + 1)
+        INTO
+            new_order_id
+        FROM ORDERS;
+        -- INSERT THE NEW ORDER INTO THE ORDERS TABLE...
+        INSERT INTO ORDERS(ORDER_ID, CUSTOMER_ID, STATUS, SALESMAN_ID, ORDER_DATE)
+        VALUES (new_order_id, customer_id, 'Shipped', 56, SYSDATE);
+        COMMIT;
+        --DISPLAY THE ORDER CONTENTS
+        DBMS_OUTPUT.PUT_LINE('Order appended to the database!' || CHR(10) || new_order_id || CHR(10) || customer_id ||
+                             CHR(10) || 'Shipped' || CHR(10) || 'Salesman id: ' || 56 ||
+                             (TO_CHAR(SYSDATE, 'DD-MON-YY')));
+    END IF;
+    --IF CUSTOMER NOT FOUND, FIND_CUSTOMER WILL DISPLAY ITS OWN ERROR MESSAGE...
+EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.put_line('ADD_ORDER: Oops something went wrong...' || CHR(10));
+END;
+
+CREATE OR REPLACE PROCEDURE add_order_item(orderId IN order_items.order_id%type, itemId IN order_items.item_id%type,
+                                           productId IN order_items.product_id%type,
+                                           quantity IN order_items.quantity%type,
+                                           price IN order_items.unit_price%type)
+    IS
+
+BEGIN
+
 END;
