@@ -560,16 +560,19 @@ CREATE OR REPLACE PROCEDURE add_order_item(orderId IN order_items.order_id%type,
 BEGIN
     SELECT ORDER_ID
     INTO id
-    FROM ORDER_ITEMS
+    FROM ORDERS
     WHERE ORDER_ID = orderId;
 
     --INSERT THE PARAMETER LIST INTO THE ORDER ITEMS TABLE
     INSERT INTO ORDER_ITEMS(ORDER_ID, ITEM_ID, PRODUCT_ID, QUANTITY, UNIT_PRICE)
     VALUES (orderId, itemId, productId, quantity, price);
+    DBMS_OUTPUT.PUT_LINE('Order_Item appended to the database!' || CHR(10) || 'Order ID: ' || orderId || CHR(10)
+        || 'Item ID : ' || itemId || CHR(10) || 'Product ID: ' || productId || CHR(10) || 'QTY: ' || quantity ||
+                         CHR(10) || 'Price: ' || price);
     COMMIT;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN DBMS_OUTPUT.PUT_LINE('ADD ORDER ITEM. Sorry the order id: '
-        || orderId || 'is invalid...');
+        || orderId || ' is invalid...');
 END;
 
 
@@ -596,7 +599,7 @@ BEGIN
     FOR item in o_cursor
         LOOP
             DBMS_OUTPUT.PUT_LINE('Order ID: ' || item.ORDER_ID || CHR(10) ||
-                                 'Customer ID : ' || item.CUSTOMER_ID || CHR(10) ||
+                                 'Customer ID: ' || item.CUSTOMER_ID || CHR(10) ||
                                  'Item ID: ' || item.ITEM_ID || CHR(10) ||
                                  'Product ID: ' || item.PRODUCT_ID || CHR(10) ||
                                  'QTY: ' || item.QUANTITY || CHR(10) ||
@@ -653,7 +656,7 @@ BEGIN
         ELSE RAISE INVALID_TASK;
         END CASE;
 EXCEPTION
-    WHEN invalid_task THEN DBMS_OUTPUT.PUT_LINE('MASTER PROC. The supplied task: ' || task || 'is invalid');
+    WHEN invalid_task THEN DBMS_OUTPUT.PUT_LINE('MASTER PROC. The supplied task: ' || task || ' is invalid');
     WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('Master PROC. Oops something went wrong...');
 END;
 
@@ -667,23 +670,25 @@ BEGIN
 --     DBMS_OUTPUT.PUT_LINE(CHR(10));
 --     master_proc(2, 7777777);
 --     DBMS_OUTPUT.PUT_LINE(CHR(10));
-    master_proc(3, 289);
+--     master_proc(3, 289);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     master_proc(3, 290);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+    add_order_item(1, 7, 207, 100.00, 24.99);
     DBMS_OUTPUT.PUT_LINE(CHR(10));
-    master_proc(3, 290);
+    add_order_item(1, 8, 208, 90.00, 20.99);
     DBMS_OUTPUT.PUT_LINE(CHR(10));
-    --     add_order_item(1, 7, 207, 100.00, 24.99);
---     DBMS_OUTPUT.PUT_LINE(CHR(10));
---     add_order_item(1, 8, 208, 90.00, 20.99);
---     DBMS_OUTPUT.PUT_LINE(CHR(10));
---     add_order_item(1, 9, 209, 50.00, 21.99);
---     DBMS_OUTPUT.PUT_LINE(CHR(10));
---     add_order_item(1, 10, 210, 25.00, 88.99);
---     DBMS_OUTPUT.PUT_LINE(CHR(10));
---     add_order_item(1, 11, 211, 15.00, 41.99);
---     DBMS_OUTPUT.PUT_LINE(CHR(10));
---     add_order_item(7777777, 12, 212, 9.00, 10.99);
---     DBMS_OUTPUT.PUT_LINE(CHR(10));
---     master_proc(4, 1);
---     DBMS_OUTPUT.PUT_LINE(CHR(10));
---     master_proc(4, 7777777);
+    add_order_item(1, 9, 209, 50.00, 21.99);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    add_order_item(1, 10, 210, 25.00, 88.99);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    add_order_item(1, 11, 211, 15.00, 41.99);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    add_order_item(7777777, 12, 212, 9.00, 10.99);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    master_proc(4, 1);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    master_proc(4, 7777777);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    master_proc(5, 7777777);
 END;
