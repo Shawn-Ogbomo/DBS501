@@ -578,6 +578,9 @@ END;
 
 CREATE OR REPLACE PROCEDURE display_order(orderId IN NUMBER)
     IS
+    --CREATE VARIABLE TO CHECK VALIDITY OF ORDER ID
+    order_id_test NUMBER := 0;
+
 -- CREATE CURSOR TO TRAVERSE THE ORDERS TABLE JOIN ORDERS AND ORDER ITEMS HERE ON ORDER_ID
     CURSOR o_cursor
         IS
@@ -591,10 +594,12 @@ CREATE OR REPLACE PROCEDURE display_order(orderId IN NUMBER)
                  LEFT JOIN ORDER_ITEMS OI ON o.ORDER_ID = OI.ORDER_ID
         WHERE o.ORDER_ID = orderId;
 BEGIN
-    --CURSOR IS EMPTY
-    IF (o_cursor%NOTFOUND) THEN
-        RAISE INVALID_CURSOR;
-    END IF;
+    --INVARIANT
+    SELECT ORDER_ID
+    INTO order_id_test
+    FROM ORDERS
+    WHERE ORDER_ID = orderId;
+
     -- CURSOR IS NOT EMPTY. TRAVERSE THE CURSOR AND DISPLAY ITEM CONTENTS...
     FOR item in o_cursor
         LOOP
@@ -607,7 +612,8 @@ BEGIN
             DBMS_OUTPUT.PUT_LINE(CHR(10));
         END LOOP;
 EXCEPTION
-    WHEN INVALID_CURSOR THEN dbms_output.put_line('DISPLAY_ORDER: THE CURSOR IS EMPTY...');
+    WHEN NO_DATA_FOUND THEN dbms_output.put_line('DISPLAY_ORDER. The ORDER ID: ' || orderId ||
+                                                 ' returned an empty cursor...');
     WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('DISPLAY_ORDER: Oops something went wrong...');
 END;
 
@@ -674,17 +680,17 @@ BEGIN
 --     DBMS_OUTPUT.PUT_LINE(CHR(10));
 --     master_proc(3, 290);
 --     DBMS_OUTPUT.PUT_LINE(CHR(10));
-    add_order_item(1, 7, 207, 100.00, 24.99);
-    DBMS_OUTPUT.PUT_LINE(CHR(10));
-    add_order_item(1, 8, 208, 90.00, 20.99);
-    DBMS_OUTPUT.PUT_LINE(CHR(10));
-    add_order_item(1, 9, 209, 50.00, 21.99);
-    DBMS_OUTPUT.PUT_LINE(CHR(10));
-    add_order_item(1, 10, 210, 25.00, 88.99);
-    DBMS_OUTPUT.PUT_LINE(CHR(10));
-    add_order_item(1, 11, 211, 15.00, 41.99);
-    DBMS_OUTPUT.PUT_LINE(CHR(10));
-    add_order_item(7777777, 12, 212, 9.00, 10.99);
+--     add_order_item(1, 7, 207, 100.00, 24.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 8, 208, 90.00, 20.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 9, 209, 50.00, 21.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 10, 210, 25.00, 88.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 11, 211, 15.00, 41.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(7777777, 12, 212, 9.00, 10.99);
     DBMS_OUTPUT.PUT_LINE(CHR(10));
     master_proc(4, 1);
     DBMS_OUTPUT.PUT_LINE(CHR(10));
