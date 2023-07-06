@@ -562,7 +562,6 @@ END;
 CREATE OR REPLACE PROCEDURE display_order(orderId IN NUMBER)
     IS
 -- CREATE CURSOR TO TRAVERSE THE ORDERS TABLE JOIN ORDERS AND ORDER ITEMS HERE ON ORDER_ID
-    id ORDERS.ORDER_ID%TYPE; --VARIABLE TO VALIDATE THE ORDER ID...
     CURSOR o_cursor
         IS
         SELECT o.ORDER_ID,
@@ -575,10 +574,9 @@ CREATE OR REPLACE PROCEDURE display_order(orderId IN NUMBER)
                  LEFT JOIN ORDER_ITEMS OI ON o.ORDER_ID = OI.ORDER_ID
         WHERE o.ORDER_ID = orderId;
 BEGIN
-    SELECT ORDER_ID
-    INTO id
-    FROM ORDERS
-    WHERE ORDER_ID = orderId;
+    IF (o_cursor%NOTFOUND) THEN
+        RAISE INVALID_CURSOR;
+    END IF;
 
     FOR item in o_cursor
         LOOP
@@ -591,7 +589,6 @@ BEGIN
             DBMS_OUTPUT.PUT_LINE(CHR(10));
         END LOOP;
 EXCEPTION
-    WHEN NO_DATA_FOUND THEN DBMS_OUTPUT.PUT_LINE('DISPLAY_ORDER. Sorry the order: ' || orderId ||
-                                                 'does not exist in the database...');
+    WHEN INVALID_CURSOR THEN dbms_output.put_line('DISPLAY_ORDER: THE CURSOR IS EMPTY...');
     WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('DISPLAY_ORDER: Oops something went wrong...');
 END;
