@@ -82,7 +82,6 @@ BEGIN
     -- CHECK VALIDITY OF THE RATING
     IF (rating < 0 OR rating > max_rating) THEN
         RAISE invalid_rating;
-
     END IF;
 
     --TRAVERSE THE EMPLOYEE TABLE USING CURSOR TO FIND THE TARGET EMPLOYEE NUMBER
@@ -156,7 +155,7 @@ BEGIN
                     FROM EMPLOYEE
                     WHERE EMPLOYEE.EMPNO = emp.EMPNO;
                 END IF;
-                EXIT;
+                RETURN;
             END IF;
         END LOOP;
 
@@ -479,13 +478,13 @@ BEGIN
             --THE CUSTOMER EXISTS, DISPLAY THEIR NAME AND ID
             IF (c.CUSTOMER_ID = customer_id) THEN
                 found := 1;
-                DBMS_OUTPUT.PUT_LINE(found || CHR(10) || 'Found: ' || C.CUSTOMER_ID || CHR(10) || 'Name: ' || c.NAME);
-                EXIT;
+                DBMS_OUTPUT.PUT_LINE('Found: ' || C.CUSTOMER_ID || CHR(10) || 'Name: ' || c.NAME);
+                RETURN;
             END IF;
         END LOOP;
 --CUSTOMER ID IS NOT FOUND
     found := 0;
-    DBMS_OUTPUT.PUT_LINE(found || CHR(10) || 'Sorry there is nobody with the id: ' || customer_id ||
+    DBMS_OUTPUT.PUT_LINE('Sorry there is nobody with the id: ' || customer_id ||
                          ' in the database...');
 EXCEPTION
     WHEN OTHERS THEN DBMS_OUTPUT.put_line('FIND_CUSTOMER: Oops something went wrong...' || CHR(10));
@@ -508,14 +507,16 @@ BEGIN
             -- THE PRODUCT ID EXISTS
             IF (p.PRODUCT_ID = product_id) THEN
                 price := p.LIST_PRICE;
-                DBMS_OUTPUT.PUT_LINE('Product found!' || CHR(10) || p.PRODUCT_ID || CHR(10) || p.PRODUCT_NAME ||
-                                     CHR(10) || P.DESCRIPTION || CHR(10) || p.LIST_PRICE);
-                EXIT;
+                DBMS_OUTPUT.PUT_LINE('Product found!' || CHR(10) || 'Product id: ' || p.PRODUCT_ID || CHR(10)
+                    || 'Product name: ' || p.PRODUCT_NAME || CHR(10) ||
+                                     'Product description: ' || P.DESCRIPTION || CHR(10) ||
+                                     'List price: ' || p.LIST_PRICE);
+                RETURN;
             END IF;
         END LOOP;
     -- PRODUCT NOT FOUND
     price := 0;
-    DBMS_OUTPUT.PUT_LINE('Sorry the Product you are looking for does not exist...');
+    DBMS_OUTPUT.PUT_LINE('Sorry the Product id: ' || product_id || ' does not exist...');
 EXCEPTION
     WHEN OTHERS THEN DBMS_OUTPUT.put_line('FIND_PRODUCT: Oops something went wrong...' || CHR(10));
 END;
@@ -536,11 +537,11 @@ BEGIN
         FROM ORDERS;
         -- INSERT THE NEW ORDER INTO THE ORDERS TABLE...
         INSERT INTO ORDERS(ORDER_ID, CUSTOMER_ID, STATUS, SALESMAN_ID, ORDER_DATE)
-        VALUES (new_order_id, customer_id, 'Shipped', 56, SYSDATE);
+        VALUES (new_order_id, customer_id, 'Shipped', 56, TRUNC(SYSDATE, 'DDD'));
         COMMIT;
         --DISPLAY THE ORDER CONTENTS
-        DBMS_OUTPUT.PUT_LINE('Order appended to the database!' || CHR(10) || new_order_id || CHR(10) || customer_id ||
-                             CHR(10) || 'Shipped' || CHR(10) || 'Salesman id: ' || 56 ||
+        DBMS_OUTPUT.PUT_LINE('Order appended to the database!' || CHR(10) || new_order_id || CHR(10)
+            || customer_id || CHR(10) || 'Shipped' || CHR(10) || 'Salesman id: ' || 56 || CHR(10) ||
                              (TO_CHAR(SYSDATE, 'DD-MON-YY')));
     END IF;
     --IF CUSTOMER NOT FOUND, FIND_CUSTOMER WILL DISPLAY ITS OWN ERROR MESSAGE...
@@ -548,15 +549,28 @@ EXCEPTION
     WHEN OTHERS THEN DBMS_OUTPUT.put_line('ADD_ORDER: Oops something went wrong...' || CHR(10));
 END;
 
--- CREATE OR REPLACE PROCEDURE add_order_item(orderId IN order_items.order_id%type, itemId IN order_items.item_id%type,
---                                            productId IN order_items.product_id%type,
---                                            quantity IN order_items.quantity%type,
---                                            price IN order_items.unit_price%type)
---     IS
---
--- BEGIN
---
--- END;
+
+CREATE OR REPLACE PROCEDURE add_order_item(orderId IN order_items.order_id%type, itemId IN order_items.item_id%type,
+                                           productId IN order_items.product_id%type,
+                                           quantity IN order_items.quantity%type,
+                                           price IN order_items.unit_price%type)
+    IS
+    id ORDER_ITEMS.ORDER_ID%TYPE; --VARIABLE TO DETERMINE IF THE INCOMING ID IS VALID...
+
+BEGIN
+    SELECT ORDER_ID
+    INTO id
+    FROM ORDER_ITEMS
+    WHERE ORDER_ID = orderId;
+
+    --INSERT THE PARAMETER LIST INTO THE ORDER ITEMS TABLE
+    INSERT INTO ORDER_ITEMS(ORDER_ID, ITEM_ID, PRODUCT_ID, QUANTITY, UNIT_PRICE)
+    VALUES (orderId, itemId, productId, quantity, price);
+    COMMIT;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN DBMS_OUTPUT.PUT_LINE('ADD ORDER ITEM. Sorry the order id: '
+        || orderId || 'is invalid...');
+END;
 
 
 CREATE OR REPLACE PROCEDURE display_order(orderId IN NUMBER)
@@ -574,10 +588,11 @@ CREATE OR REPLACE PROCEDURE display_order(orderId IN NUMBER)
                  LEFT JOIN ORDER_ITEMS OI ON o.ORDER_ID = OI.ORDER_ID
         WHERE o.ORDER_ID = orderId;
 BEGIN
+    --CURSOR IS EMPTY
     IF (o_cursor%NOTFOUND) THEN
         RAISE INVALID_CURSOR;
     END IF;
-
+    -- CURSOR IS NOT EMPTY. TRAVERSE THE CURSOR AND DISPLAY ITEM CONTENTS...
     FOR item in o_cursor
         LOOP
             DBMS_OUTPUT.PUT_LINE('Order ID: ' || item.ORDER_ID || CHR(10) ||
@@ -591,4 +606,84 @@ BEGIN
 EXCEPTION
     WHEN INVALID_CURSOR THEN dbms_output.put_line('DISPLAY_ORDER: THE CURSOR IS EMPTY...');
     WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('DISPLAY_ORDER: Oops something went wrong...');
+END;
+
+
+--QUESTION 5
+-- This procedure is a master procedure for four of the five procedures
+-- above.
+-- If task = 1, then, call find_customer(parm1)
+--     If task = 2, then, call find_product(parm1)
+--     If task = 3, then, call add_order(parm1)
+--     If task = 4, then, call display-order(parm1)
+--     In all cases, parm1 is the single input parameter required for the
+--     specific function.
+--     You need to handle appropriate error messages here as well.
+--     What to include in your SQL file:
+--     In your SQL file, you should include all of your:
+-- CREATE OR REPLACE PROCEDURE commands (5)
+-- CALL commands (14)
+--     What to include in your OUTPUT file:
+-- In your output file, you should include:
+-- 1 – find_customer – with a valid customer ID
+-- 2 – find_customer – with an invalid customer ID
+-- 3 – find_product – with a valid product ID
+-- 4 – find_product – with an invalid product ID
+-- 5 – add_order – with a valid customer ID
+-- 6 – add_order – with an invalid customer ID
+-- 7 – add_order_item – should execute successfully 5 times
+-- 8 – add_order_item – should execute with an invalid order ID
+-- 9 – display_order – with a valid order ID which has at least 5 order
+-- items
+-- 10 – display_order – with an invalid order ID
+-- For 1 – 6 and 9 – 10 – your call should be to the master_proc
+-- procedure. It will call the actual procedure itself.
+CREATE OR REPLACE PROCEDURE master_proc(task IN NUMBER, parm1 IN NUMBER)
+    IS
+    invalid_task EXCEPTION;
+    customer_id   NUMBER := 0;
+    product_price products.list_price%TYPE;
+    order_id      NUMBER;
+BEGIN
+    CASE task
+        WHEN 1 THEN find_customer(parm1, customer_id);
+        WHEN 2 THEN find_product(parm1, product_price);
+        WHEN 3 THEN add_order(parm1, order_id);
+        WHEN 4 THEN display_order(parm1);
+        ELSE RAISE INVALID_TASK;
+        END CASE;
+EXCEPTION
+    WHEN invalid_task THEN DBMS_OUTPUT.PUT_LINE('MASTER PROC. The supplied task: ' || task || 'is invalid');
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('Master PROC. Oops something went wrong...');
+END;
+
+
+BEGIN
+    --     master_proc(1, 1);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     master_proc(1, 7777777);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     master_proc(2, 1);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     master_proc(2, 7777777);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+    master_proc(3, 289);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    master_proc(3, 290);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    --     add_order_item(1, 7, 207, 100.00, 24.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 8, 208, 90.00, 20.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 9, 209, 50.00, 21.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 10, 210, 25.00, 88.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(1, 11, 211, 15.00, 41.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     add_order_item(7777777, 12, 212, 9.00, 10.99);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     master_proc(4, 1);
+--     DBMS_OUTPUT.PUT_LINE(CHR(10));
+--     master_proc(4, 7777777);
 END;
