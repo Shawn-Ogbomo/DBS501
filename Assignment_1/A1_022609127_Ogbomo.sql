@@ -56,6 +56,9 @@ CREATE OR REPLACE PROCEDURE salary(emp_num IN NUMBER, rating IN NUMBER)
     new_compensation EMPLOYEE.COMM %TYPE;
     old_bonus        EMPLOYEE.BONUS %TYPE;
     new_bonus        EMPLOYEE.BONUS %TYPE;
+    f_name           EMPLOYEE.FIRSTNAME%TYPE;
+    m_init           EMPLOYEE.MIDINIT%TYPE;
+    l_name           EMPLOYEE.LASTNAME%TYPE;
     CURSOR employee_cursor
         IS
         SELECT EMPNO,
@@ -93,7 +96,10 @@ BEGIN
                 old_salary := emp.SALARY;
                 old_compensation := emp.COMM;
                 old_bonus := emp.BONUS;
-
+                -- SAVE THE EMPLOYEES NAME
+                f_name := emp.FIRSTNAME;
+                l_name := emp.LASTNAME;
+                m_init := emp.MIDINIT;
                 --UPDATE THE COMPENSATION COMPONENTS
                 IF (rating = 1) THEN
                     --they receive a $10,000 salary increase.
@@ -159,6 +165,7 @@ BEGIN
     END IF;
     --DISPLAY COMPENSATION COMPONENTS...
     DBMS_OUTPUT.put_line('EMPNO: ' || emp_num || CHR(10) ||
+                         'NAME: ' || f_name || ' ' || m_init || ' ' || l_name || CHR(10) ||
                          'OLD_SALARY: ' || old_salary || CHR(10) ||
                          'NEW SALARY: ' || new_salary || CHR(10) ||
                          'OLD BONUS: ' || old_bonus || CHR(10) ||
@@ -222,6 +229,9 @@ CREATE OR REPLACE PROCEDURE upgrade_education_level(emp_num IN NUMBER, edu_code 
     found               BOOLEAN := FALSE;
     old_education_level EMPLOYEE.EDLEVEL %TYPE;
     new_education_level EMPLOYEE.EDLEVEL %TYPE;
+    f_name              EMPLOYEE.FIRSTNAME%TYPE;
+    m_init              EMPLOYEE.MIDINIT%TYPE;
+    l_name              EMPLOYEE.LASTNAME%TYPE;
     CURSOR employee_cursor
         IS
         SELECT EMPNO,
@@ -246,7 +256,10 @@ BEGIN
                 found := TRUE;
                 -- SAVE THE OLD EDUCATION LEVEL
                 old_education_level := emp.EDLEVEL;
-
+                -- SAVE THE EMPLOYEES NAME
+                f_name := emp.FIRSTNAME;
+                l_name := emp.LASTNAME;
+                m_init := emp.MIDINIT;
                 -- MATCH THE EDU_CODE TO THE CORRECT SELECTION STATEMENT...
                 IF (edu_code = 'H') THEN
                     --“H” (for high school diploma) – and – this will update the edlevel to 16
@@ -312,8 +325,9 @@ BEGIN
         RAISE invalid_employee;
     END IF;
     -- DISPLAY EMPLOYEE, FORMER EDUCATION, AND NEW EDUCATION LEVELS
-    DBMS_OUTPUT.put_line('Employee: ' || emp_num || CHR(10) || 'OLD EDUCATION LEVEL: ' || old_education_level ||
-                         CHR(10) ||
+    DBMS_OUTPUT.put_line('Employee: ' || emp_num || CHR(10) ||
+                         'NAME: ' || f_name || ' ' || m_init || ' ' || l_name || CHR(10) ||
+                         'OLD EDUCATION LEVEL: ' || old_education_level || CHR(10) ||
                          'NEW EDUCATION LEVEL: ' || new_education_level);
 
 EXCEPTION
@@ -534,12 +548,50 @@ EXCEPTION
     WHEN OTHERS THEN DBMS_OUTPUT.put_line('ADD_ORDER: Oops something went wrong...' || CHR(10));
 END;
 
-CREATE OR REPLACE PROCEDURE add_order_item(orderId IN order_items.order_id%type, itemId IN order_items.item_id%type,
-                                           productId IN order_items.product_id%type,
-                                           quantity IN order_items.quantity%type,
-                                           price IN order_items.unit_price%type)
+-- CREATE OR REPLACE PROCEDURE add_order_item(orderId IN order_items.order_id%type, itemId IN order_items.item_id%type,
+--                                            productId IN order_items.product_id%type,
+--                                            quantity IN order_items.quantity%type,
+--                                            price IN order_items.unit_price%type)
+--     IS
+--
+-- BEGIN
+--
+-- END;
+
+
+CREATE OR REPLACE PROCEDURE display_order(orderId IN NUMBER)
     IS
-
+-- CREATE CURSOR TO TRAVERSE THE ORDERS TABLE JOIN ORDERS AND ORDER ITEMS HERE ON ORDER_ID
+    id ORDERS.ORDER_ID%TYPE; --VARIABLE TO VALIDATE THE ORDER ID...
+    CURSOR o_cursor
+        IS
+        SELECT o.ORDER_ID,
+               o.CUSTOMER_ID,
+               oi.ITEM_ID,
+               oi.PRODUCT_ID,
+               oi.QUANTITY,
+               oi.UNIT_PRICE
+        FROM ORDERS o
+                 LEFT JOIN ORDER_ITEMS OI ON o.ORDER_ID = OI.ORDER_ID
+        WHERE o.ORDER_ID = orderId;
 BEGIN
+    SELECT ORDER_ID
+    INTO id
+    FROM ORDERS
+    WHERE ORDER_ID = orderId;
 
+    FOR item in o_cursor
+        LOOP
+            DBMS_OUTPUT.PUT_LINE('Order ID: ' || item.ORDER_ID || CHR(10) ||
+                                 'Customer ID : ' || item.CUSTOMER_ID || CHR(10) ||
+                                 'Item ID: ' || item.ITEM_ID || CHR(10) ||
+                                 'Product ID: ' || item.PRODUCT_ID || CHR(10) ||
+                                 'QTY: ' || item.QUANTITY || CHR(10) ||
+                                 'Unit Price: ' || item.UNIT_PRICE);
+            DBMS_OUTPUT.PUT_LINE(CHR(10));
+        END LOOP;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN DBMS_OUTPUT.PUT_LINE('DISPLAY_ORDER. Sorry the order: ' || orderId ||
+                                                 'does not exist in the database...');
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('DISPLAY_ORDER: Oops something went wrong...');
 END;
