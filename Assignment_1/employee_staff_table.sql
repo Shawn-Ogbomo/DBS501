@@ -1,4 +1,5 @@
---SET DEFINE OFF;
+--
+SET DEFINE OFF;
 
 DROP TABLE employee;
 DROP TABLE staff;
@@ -40,7 +41,8 @@ DELETE
 FROM staff;
 
 
---EMPLOYEE INSERTS...
+--EMPLOYEE INSERTS.
+..
 INSERT INTO EMPLOYEE(empno, firstname, midinit, lastname, workdept, phoneno, hiredate, job, edlevel, sex, birthdate,
                      salary, bonus, comm)
 VALUES ('000010', 'CHRISTINE', 'I', 'HAAS', 'A00', '3978', (DATE '1995-01-01'), 'PRES    ', 18, 'F',
@@ -267,7 +269,7 @@ VALUES ('200340', 'ROY', 'R', 'ALONZO', 'E21', '5698', (DATE '1997-07-05'), 'FIE
         +0031840.00, +0000500.00, +0001907.00);
 
 
---STAFF INSERTS...
+-- STAFF INSERTS
 INSERT INTO STAFF(ID, NAME, DEPT, JOB, YEARS, SALARY, COMM)
 VALUES (10, 'Sanders', 20, 'Mgr  ', 7, +98357.50, null);
 
