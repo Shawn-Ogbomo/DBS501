@@ -1,6 +1,6 @@
 /*Name: Shawn Ogbomo
  Student# 022609127
- Date 08/01/2023
+ Date 08/05/2023
  Section DBS501NSC
  Instructor Riyadh Al-Essawi*/
 
@@ -63,9 +63,6 @@ BEGIN
     emp_sal := :new.SALARY;
     emp_comm := :new.COMM;
 
-
-    DBMS_OUTPUT.PUT_LINE(emp_id || CHR(10) || emp_sal || CHR(10) || emp_comm);
-
     IF emp_comm > (0.25 * emp_sal) AND (emp_comm + emp_sal < 50000) THEN
         err_code := 'Both comm and salary are invalid...';
     ELSIF emp_comm > 0.25 * emp_sal THEN
@@ -100,4 +97,27 @@ BEGIN
 
     INSERT INTO STAFF(id, name, dept, job, years, salary, comm)
     VALUES (777, 'Sarah', 15, 'Clerk', 7, 30000, 8000);
+
+    UPDATE STAFF
+    SET STAFF.SALARY = STAFF.SALARY + 1000,
+        STAFF.COMM   = STAFF.COMM + 25
+    WHERE STAFF.NAME = 'Jenny';
+    COMMIT;
+
+    UPDATE STAFF
+    SET STAFF.COMM = STAFF.COMM + 20000
+    WHERE STAFF.NAME = 'Edwards';
+    COMMIT;
+
+    UPDATE STAFF
+    SET STAFF.SALARY = 40000
+    WHERE STAFF.NAME = 'Davis';
+    COMMIT;
+
+    UPDATE STAFF
+    SET STAFF.SALARY = 20000,
+        STAFF.COMM   = 11000
+    WHERE STAFF.NAME = 'Yamaguchi';
+    COMMIT;
+
 END;
