@@ -353,7 +353,7 @@ BEGIN
     my_math_all(vals);
 END;
 
---QUESTION 6
+--QUESTION 5
 --(15%) Write a trigger – _varpaychk – _which checks for the following
 -- compensation rules when a record is INSERTed or UPDATEed into the
 -- EMPLOYEE table
@@ -446,26 +446,51 @@ BEGIN
                          BONUS, COMM)
     VALUES (555, 'James', 'Ogbomo', 'E11', 77, DATE'2004-12-05', 'CLERK', 13, 'M', DATE'1991-04-05', 50000, 500, 500);
 
---     UPDATE EMPLOYEE
---     SET EMPLOYEE.SALARY = EMPLOYEE.SALARY + 1000,
---         EMPLOYEE.COMM   = EMPLOYEE.COMM + 25
---     WHERE EMPLOYEE.NAME = 'Jenny';
---     COMMIT;
---
---     UPDATE EMPLOYEE
---     SET EMPLOYEE.COMM = EMPLOYEE.COMM + 20000
---     WHERE EMPLOYEE.NAME = 'Edwards';
---     COMMIT;
---
---     UPDATE EMPLOYEE
---     SET EMPLOYEE.SALARY = 40000
---     WHERE EMPLOYEE.NAME = 'Davis';
---     COMMIT;
---
---     UPDATE STAFF
---     SET STAFF.SALARY = 20000,
---         STAFF.COMM   = 11000
---     WHERE STAFF.NAME = 'Yamaguchi';
---     COMMIT;
+    UPDATE EMPLOYEE
+    SET EMPLOYEE.SALARY = EMPLOYEE.SALARY + 1000,
+        EMPLOYEE.COMM   = EMPLOYEE.COMM + 25
+    WHERE EMPLOYEE.FIRSTNAME = 'Jenny';
+    COMMIT;
+
+    UPDATE EMPLOYEE
+    SET EMPLOYEE.BONUS = EMPLOYEE.BONUS + 100
+    WHERE EMPLOYEE.FIRSTNAME = 'Shawn';
+    COMMIT;
+
+    UPDATE EMPLOYEE
+    SET EMPLOYEE.COMM = EMPLOYEE.COMM + 1000
+    WHERE EMPLOYEE.FIRSTNAME = 'Sarah';
+    COMMIT;
+
+    UPDATE EMPLOYEE
+    SET EMPLOYEE.SALARY = EMPLOYEE.SALARY + 500,
+        EMPLOYEE.COMM   = EMPLOYEE.COMM + 500
+    WHERE EMPLOYEE.FIRSTNAME = 'James';
+    COMMIT;
 
 END;
+
+
+--QUESTION 6
+-- (15%) Write a trigger – _nomgr – _which checks for the following
+-- when an INSERT, UPDATE or DELETE takes place that ensures every
+--     employee has a manager.
+--     Start by INSERTing a HR Manager into the EMPLOYEE table which works
+--                                                 for WORKDEPT = “000”. This will be a default HR Manager for employees
+-- being INSERTed to a department which does not have a manager.
+-- The trigger should be executed when any I/U/D takes place against the
+-- EMPLOYEE table which changes the WORKDEPT.
+-- For an INSERT or UPDATE - if there is a manager for the WORKDEPT –
+--     _there is nothing to do. If there is not a manager update the record so
+--                                                            that the WORKDEPT is “000”.
+--                                                            A record should be recorded in the EMPAUDIT table to reflect that the
+--                                                            the WORKDEPT had to change. The audit record should record the
+--     original desired department and an error code which makes the error
+--     type clear (see details below).
+--     When a DELETE takes place and deletes a manager (JOB=”MANAGER”) all
+--                the employees currently in that department need to shift to WORKDEPT
+--                “000”. Note that this could impact multiple employees and you’ll need a
+--                loop to deal with that.
+-- The trigger should handle multiple records being INSERTed or UPDATEd
+-- or DELETEd into the EMPLOYEE table. Make sure you test multi-record
+--     changes.
