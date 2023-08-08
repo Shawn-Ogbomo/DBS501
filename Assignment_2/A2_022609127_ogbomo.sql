@@ -279,3 +279,193 @@ BEGIN
             END IF;
         END LOOP;
 END;
+
+--QUESTION 4
+--  (10%) – Write a procedure called my_math_all which takes the
+-- values in a column (like department or salary) as input and will output
+-- the mathematical median, mode and mean of the values in that
+-- column.
+-- Median and mode are defined above.
+-- Mean is the same as average and there’s already a function called AVG
+-- in SQL which you can use.
+-- WHAT TO HAND IN: A copy of your stored procedure and the output of
+-- 2 calls showing your stored procedure works properly. Make sure to
+-- handle errors (like an empty list). Your 2 calls should be:
+-- - A list which shows a median, mode and mean (average)
+-- - An empty list
+
+CREATE OR REPLACE PROCEDURE my_math_all(list IN OUT int_array)
+    IS
+    invalid_list EXCEPTION;
+    list_size NUMBER;
+    modes     int_array;
+    mean      NUMBER;
+BEGIN
+    list_size := list.COUNT;
+
+    IF list_size = 0 THEN
+        RAISE invalid_list;
+    END IF;
+
+    --MEAN
+    mean := 0;
+    for i in 1..list.COUNT
+        LOOP
+            mean := (mean + list(i));
+        END LOOP;
+    mean := mean / list.COUNT;
+
+    DBMS_OUTPUT.PUT_LINE('Mean: ' || mean || CHR(10));
+
+    --MEDIAN
+    DBMS_OUTPUT.PUT_LINE('Median: ' || my_median(list) || CHR(10));
+
+    --MODE
+    modes := my_mode(list);
+    IF modes IS NOT NULL THEN
+        DBMS_OUTPUT.PUT_LINE('Mode: ' || CHR(10));
+        for i in 1..modes.COUNT
+            LOOP
+                IF modes(i) != -1 THEN
+                    DBMS_OUTPUT.PUT_LINE(modes(i) || CHR(10));
+                END IF;
+            END LOOP;
+    END IF;
+
+EXCEPTION
+    WHEN invalid_list THEN
+        DBMS_OUTPUT.PUT_LINE('Oops the list is empty...');
+
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Oops something went wrong...');
+END;
+
+
+DECLARE
+    vals int_array;
+BEGIN
+    --CALL WITH VALID LIST
+    vals := int_array(1, 2, 3, 4, 5, 6, 7, 7, 7, 11, 11, 11, 0, 0, 0);
+    my_math_all(vals);
+    DBMS_OUTPUT.PUT_LINE(CHR(10));
+    --CALL WITH EMPTY LIST
+    vals := int_array();
+    my_math_all(vals);
+END;
+
+--QUESTION 6
+--(15%) Write a trigger – _varpaychk – _which checks for the following
+-- compensation rules when a record is INSERTed or UPDATEed into the
+-- EMPLOYEE table
+-- - BONUS should be < 20% of SALARY
+-- - COMMISSION should be < 25% of SALARY
+-- - Sum of BONUS & COMMISSION should be < 40% of SALARY
+-- Create an EMPAUDIT table which records any failure to adhere to the
+-- above rules.
+-- The INSERT or UPDATE should still be successful into the EMPLOYEE
+--     table, but, an error record should be recorded in the EMPAUDIT table.
+--     The trigger should handle multiple records being INSERTed or UPDATEd
+--     into the EMPLOYEE table. Make sure you test multi-record changes.
+
+create table EMP_AUDIT
+(
+    EMPLOYEE_ID   NUMBER(7, 2),
+    TRANSACTION   VARCHAR(6),
+    "DATE"        DATE,
+    SALARY        NUMBER(9, 2),
+    BONUS         NUMBER(9, 2),
+    COMM          NUMBER(9, 2),
+    ERROR_MESSAGE VARCHAR(35)
+);
+
+
+CREATE OR REPLACE TRIGGER varpaychk
+    AFTER
+        INSERT OR UPDATE
+    ON EMPLOYEE
+    FOR EACH ROW
+    WHEN ( new.EMPNO > 0 )
+DECLARE
+    transaction_type VARCHAR2(10);
+    emp_id           EMPLOYEE.EMPNO %TYPE;
+    emp_sal          EMPLOYEE.SALARY %TYPE;
+    emp_comm         EMPLOYEE.COMM %TYPE;
+    emp_bonus        EMPLOYEE.BONUS%TYPE;
+    err_code         VARCHAR2(35);
+    NO_DATA EXCEPTION;
+BEGIN
+    transaction_type := CASE
+                            WHEN INSERTING THEN 'INSERT'
+                            WHEN UPDATING THEN 'UPDATE'
+        END;
+
+    emp_id := :new.EMPNO;
+    emp_sal := :new.SALARY;
+    emp_comm := :new.COMM;
+    emp_bonus := :new.BONUS;
+
+    IF (emp_comm + emp_bonus) >= (0.40 * emp_sal) THEN
+        err_code := 'Invalid comm+bonus...';
+    ELSIF emp_bonus >= (0.20 * emp_sal) THEN
+        err_code := 'Invalid bonus...';
+    ELSIF emp_comm > 0.25 * emp_sal THEN
+        err_code := 'Invalid commission...';
+
+    ELSE
+        RAISE NO_DATA;
+    END IF;
+
+
+    INSERT INTO EMP_AUDIT(EMPLOYEE_ID, TRANSACTION, "DATE", SALARY, BONUS, COMM, ERROR_MESSAGE)
+    VALUES (emp_id, transaction_type, SYSDATE, emp_sal, emp_bonus, emp_comm, err_code);
+EXCEPTION
+    WHEN NO_DATA THEN
+        DBMS_OUTPUT.PUT_LINE('Oops, no data to record');
+    When OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Oops, something went wrong...');
+END;
+/
+
+
+DECLARE
+
+BEGIN
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (222, 'Jenny', 'Bing', 'A00', 77, DATE'2004-12-05', 'CLERK', 17, 'F', DATE'1994-03-22', 50000, 10000, 500);
+
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (333, 'Shawn', 'Green', 'B01', 77, DATE'2004-12-05', 'CLERK', 15, 'M', DATE'1993-01-21', 80000, 0, 30000);
+
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (444, 'Sarah', 'Smith', 'C01', 77, DATE'2004-12-05', 'CLERK', 14, 'F', DATE'1992-02-10', 45000, 10000, 9000);
+
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (555, 'James', 'Ogbomo', 'E11', 77, DATE'2004-12-05', 'CLERK', 13, 'M', DATE'1991-04-05', 50000, 500, 500);
+
+--     UPDATE EMPLOYEE
+--     SET EMPLOYEE.SALARY = EMPLOYEE.SALARY + 1000,
+--         EMPLOYEE.COMM   = EMPLOYEE.COMM + 25
+--     WHERE EMPLOYEE.NAME = 'Jenny';
+--     COMMIT;
+--
+--     UPDATE EMPLOYEE
+--     SET EMPLOYEE.COMM = EMPLOYEE.COMM + 20000
+--     WHERE EMPLOYEE.NAME = 'Edwards';
+--     COMMIT;
+--
+--     UPDATE EMPLOYEE
+--     SET EMPLOYEE.SALARY = 40000
+--     WHERE EMPLOYEE.NAME = 'Davis';
+--     COMMIT;
+--
+--     UPDATE STAFF
+--     SET STAFF.SALARY = 20000,
+--         STAFF.COMM   = 11000
+--     WHERE STAFF.NAME = 'Yamaguchi';
+--     COMMIT;
+
+END;
