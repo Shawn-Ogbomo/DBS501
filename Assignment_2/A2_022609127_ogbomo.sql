@@ -1,4 +1,12 @@
 CREATE OR REPLACE TYPE int_array IS VARRAY(20) OF INTEGER;
+/*Name: Shawn Ogbomo
+ Student# 022609127
+ Date 08/09/2023
+ Section DBS501NSC
+ Instructor Riyadh Al-Essawi
+ Assignment 1*/
+
+-- SET SERVEROUTPUT ON;
 
 --QUESTION1
 --(0%) This is preparation – It is very important to ensure you have
@@ -79,6 +87,7 @@ BEGIN
         RETURN list((list_size + 1) / 2);
     END IF;
 
+    --NUMBER IS EVEN
     first_middle := list(list_size / 2);
     second_middle := list((list_size / 2) + 1);
 
@@ -155,7 +164,9 @@ CREATE OR REPLACE FUNCTION my_mode(list int_array)
 BEGIN
     list_size := list.COUNT;
 
+    --HOLDS THE NUMBER OF OCCURRENCES FOR EACH VALUE IN THE LIST
     occurrences := int_array(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+
     IF list_size = 0 THEN
         RAISE invalid_list;
     END IF;
@@ -166,6 +177,7 @@ BEGIN
 
     pos := 1;
 
+    --FILL THE PARRALLEL ARRAY OCCURRENCES WITH THE NUMBER OF OCCURRENCES OF EACH VALUE IN THE LIST
     for i in 1..list.COUNT
         LOOP
             total_occurrences := 0;
@@ -191,6 +203,7 @@ BEGIN
             END IF;
         END LOOP;
 
+    --NO MODE WITH A NUMBER THAT ONLY OCCURS ONCE
     IF max_occurrences = 1 THEN
         RAISE no_mode;
     END IF;
@@ -307,7 +320,7 @@ BEGIN
         RAISE invalid_list;
     END IF;
 
-    --MEAN
+    --MEAN DISPLAY
     mean := 0;
     for i in 1..list.COUNT
         LOOP
@@ -317,10 +330,10 @@ BEGIN
 
     DBMS_OUTPUT.PUT_LINE('Mean: ' || mean || CHR(10));
 
-    --MEDIAN
+    --MEDIAN DISPLAY
     DBMS_OUTPUT.PUT_LINE('Median: ' || my_median(list) || CHR(10));
 
-    --MODE
+    --MODE DISPLAY
     modes := my_mode(list);
     IF modes IS NOT NULL THEN
         DBMS_OUTPUT.PUT_LINE('Mode: ' || CHR(10));
@@ -375,9 +388,9 @@ create table EMP_AUDIT
     SALARY        NUMBER(9, 2),
     BONUS         NUMBER(9, 2),
     COMM          NUMBER(9, 2),
+    WORK_DEPT     CHAR(3),
     ERROR_MESSAGE VARCHAR(35)
 );
-
 
 CREATE OR REPLACE TRIGGER varpaychk
     AFTER
@@ -470,7 +483,6 @@ BEGIN
 
 END;
 
-
 -- --QUESTION 6
 -- -- (15%) Write a trigger – _nomgr – _which checks for the following
 -- -- when an INSERT, UPDATE or DELETE takes place that ensures every
@@ -495,28 +507,77 @@ END;
 -- -- or DELETEd into the EMPLOYEE table. Make sure you test multi-record
 -- --     changes.
 --
--- CREATE OR REPLACE TRIGGER nomgr
---     AFTER
---         INSERT OR UPDATE OR DELETE
---     ON EMPLOYEE
---     FOR EACH ROW
---     WHEN ( new.EMPNO > 0 )
--- DECLARE
--- BEGIN
---
---
--- END;
--- /
---
--- DECLARE
---
--- BEGIN
---     INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
---                          BONUS, COMM)
---     VALUES (222, 'Jenny', 'Bing',000 , 77, DATE'2004-12-05', 'CLERK', 17, 'F', DATE'1994-03-22', 50000, 10000, 500);
---
--- END;
+CREATE OR REPLACE TRIGGER nomgr
+    AFTER
+        INSERT OR UPDATE OR DELETE
+    ON EMPLOYEE
+    FOR EACH ROW
 
+DECLARE
+    transaction_type VARCHAR2(10);
+    emp_id           EMPLOYEE.EMPNO %TYPE;
+    emp_work_dep     EMPLOYEE.WORKDEPT%TYPE;
+    emp_sal          EMPLOYEE.SALARY %TYPE;
+    emp_comm         EMPLOYEE.COMM %TYPE;
+    emp_bonus        EMPLOYEE.BONUS%TYPE;
+    emp_job          EMPLOYEE.JOB%TYPE;
+    CURSOR emp_cursor IS
+        SELECT WORKDEPT, JOB
+        FROM EMPLOYEE FOR UPDATE OF WORKDEPT;
+BEGIN
+    transaction_type := CASE
+                            WHEN INSERTING THEN 'INSERT'
+                            WHEN UPDATING THEN 'UPDATE'
+                            WHEN DELETING THEN 'DELETE'
+        END;
+
+    emp_id := :new.EMPNO;
+    emp_work_dep := :new.WORKDEPT;
+    emp_sal := :new.SALARY;
+    emp_comm := :new.COMM;
+    emp_bonus := :new.BONUS;
+    emp_job := :old.JOB;
+
+    IF transaction_type = 'INSERT' OR transaction_type = 'UPDATE' THEN
+        emp_work_dep := '000';
+        INSERT INTO EMP_AUDIT(EMPLOYEE_ID, TRANSACTION, "DATE", SALARY, BONUS, COMM, WORK_DEPT, ERROR_MESSAGE)
+        VALUES (emp_id, transaction_type, SYSDATE, emp_sal, emp_bonus, emp_comm, emp_work_dep,
+                'Invalid manager.' || CHR(10) || 'Value Was previously NULL' || CHR(10) || 'Work dept is now: ' ||
+                emp_work_dep);
+        RETURN;
+
+        INSERT INTO EMP_AUDIT(EMPLOYEE_ID, TRANSACTION, "DATE", SALARY, BONUS, COMM, WORK_DEPT, ERROR_MESSAGE)
+        VALUES (emp_id, transaction_type, SYSDATE, emp_sal, emp_bonus, emp_comm,
+                emp_work_dep, NULL);
+        RETURN;
+    END IF;
+
+    IF transaction_type = 'DELETE' AND emp_job = 'MANAGER' THEN
+        for emp in emp_cursor
+            LOOP
+                IF (emp.WORKDEPT = emp_work_dep) THEN
+                    UPDATE EMPLOYEE
+                    SET WORKDEPT = '000'
+                    WHERE emp.WORKDEPT = emp_work_dep;
+                END IF;
+            END LOOP;
+    END IF;
+EXCEPTION
+    WHEN
+        OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Oops, something went wrong...');
+END;
+/
+
+DECLARE
+
+BEGIN
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE,
+                         SALARY,
+                         BONUS, COMM)
+    VALUES (222, 'Jenny', 'Bing', 000, 77, DATE'2004-12-05', 'CLERK', 17, 'F', DATE'1994-03-22', 50000, 10000,
+            500);
+END;
 
 --QUESTION 7
 --(20%) Write a trigger – _empvac – _which adds a record into a
@@ -536,7 +597,9 @@ END;
 -- The trigger should handle multiple records being INSERTed or UPDATEd
 -- into the EMPLOYEE table. Make sure you test multi-record changes.
 
-create table VACATION
+create
+    table
+    VACATION
 (
     EMPLOYEE_ID        NUMBER(7, 2),
     EMPLOYEE_FIRSTNAME VARCHAR2(12),
@@ -547,9 +610,12 @@ create table VACATION
     VACATION_LENGTH    NUMBER(7, 2)
 );
 
-CREATE OR REPLACE TRIGGER empvac
+CREATE
+    OR
+    REPLACE TRIGGER empvac
     AFTER
-        INSERT OR UPDATE OR DELETE
+        INSERT OR UPDATE OR
+        DELETE
     ON EMPLOYEE
     FOR EACH ROW
 
@@ -618,26 +684,33 @@ EXCEPTION
 END;
 /
 
-
 DECLARE
 
 BEGIN
-    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE,
+                         SALARY,
                          BONUS, COMM)
-    VALUES (222, 'Jenny', 'Bing', 'A00', 77, DATE'2013-12-05', 'CLERK', 17, 'F', DATE'1994-03-22', 50000, 10000, 500);
+    VALUES (222, 'Jenny', 'Bing', 'A00', 77, DATE'2013-12-05', 'CLERK', 17, 'F', DATE'1994-03-22', 50000, 10000,
+            500);
 
-    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE,
+                         SALARY,
                          BONUS, COMM)
-    VALUES (444, 'Sarah', 'Smith', 'C01', 77, DATE'2012-12-05', 'CLERK', 14, 'F', DATE'1992-02-10', 45000, 10000, 9000);
+    VALUES (444, 'Sarah', 'Smith', 'C01', 77, DATE'2012-12-05', 'CLERK', 14, 'F', DATE'1992-02-10', 45000,
+            10000,
+            9000);
 
-    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE,
+                         SALARY,
                          BONUS, COMM)
-    VALUES (555, 'Ricky', 'Smith', 'E11', 77, DATE'2003-12-05', 'CLERK', 13, 'M', DATE'1975-04-05', 50000, 500, 500);
+    VALUES (555, 'Ricky', 'Smith', 'E11', 77, DATE'2003-12-05', 'CLERK', 13, 'M', DATE'1975-04-05', 50000, 500,
+            500);
 
-    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE,
+                         SALARY,
                          BONUS, COMM)
-    VALUES (777, 'James', 'Ogbomo', 'E11', 77, DATE'1993-12-05', 'CLERK', 13, 'M', DATE'1975-04-05', 50000, 500, 500);
-
+    VALUES (777, 'James', 'Ogbomo', 'E11', 77, DATE'1993-12-05', 'CLERK', 13, 'M', DATE'1975-04-05', 50000, 500,
+            500);
 
     UPDATE EMPLOYEE
     SET EMPLOYEE.HIREDATE = DATE'2005-12-05'
