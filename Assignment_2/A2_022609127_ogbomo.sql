@@ -471,26 +471,191 @@ BEGIN
 END;
 
 
---QUESTION 6
--- (15%) Write a trigger – _nomgr – _which checks for the following
--- when an INSERT, UPDATE or DELETE takes place that ensures every
---     employee has a manager.
---     Start by INSERTing a HR Manager into the EMPLOYEE table which works
---                                                 for WORKDEPT = “000”. This will be a default HR Manager for employees
--- being INSERTed to a department which does not have a manager.
--- The trigger should be executed when any I/U/D takes place against the
--- EMPLOYEE table which changes the WORKDEPT.
--- For an INSERT or UPDATE - if there is a manager for the WORKDEPT –
---     _there is nothing to do. If there is not a manager update the record so
---                                                            that the WORKDEPT is “000”.
---                                                            A record should be recorded in the EMPAUDIT table to reflect that the
---                                                            the WORKDEPT had to change. The audit record should record the
---     original desired department and an error code which makes the error
---     type clear (see details below).
---     When a DELETE takes place and deletes a manager (JOB=”MANAGER”) all
---                the employees currently in that department need to shift to WORKDEPT
---                “000”. Note that this could impact multiple employees and you’ll need a
---                loop to deal with that.
+-- --QUESTION 6
+-- -- (15%) Write a trigger – _nomgr – _which checks for the following
+-- -- when an INSERT, UPDATE or DELETE takes place that ensures every
+-- --     employee has a manager.
+-- --     Start by INSERTing a HR Manager into the EMPLOYEE table which works
+-- --                                                 for WORKDEPT = “000”. This will be a default HR Manager for employees
+-- -- being INSERTed to a department which does not have a manager.
+-- -- The trigger should be executed when any I/U/D takes place against the
+-- -- EMPLOYEE table which changes the WORKDEPT.
+-- -- For an INSERT or UPDATE - if there is a manager for the WORKDEPT –
+-- --     _there is nothing to do. If there is not a manager update the record so
+-- --                                                            that the WORKDEPT is “000”.
+-- --                                                            A record should be recorded in the EMPAUDIT table to reflect that the
+-- --                                                            the WORKDEPT had to change. The audit record should record the
+-- --     original desired department and an error code which makes the error
+-- --     type clear (see details below).
+-- --     When a DELETE takes place and deletes a manager (JOB=”MANAGER”) all
+-- --                the employees currently in that department need to shift to WORKDEPT
+-- --                “000”. Note that this could impact multiple employees and you’ll need a
+-- --                loop to deal with that.
+-- -- The trigger should handle multiple records being INSERTed or UPDATEd
+-- -- or DELETEd into the EMPLOYEE table. Make sure you test multi-record
+-- --     changes.
+--
+-- CREATE OR REPLACE TRIGGER nomgr
+--     AFTER
+--         INSERT OR UPDATE OR DELETE
+--     ON EMPLOYEE
+--     FOR EACH ROW
+--     WHEN ( new.EMPNO > 0 )
+-- DECLARE
+-- BEGIN
+--
+--
+-- END;
+-- /
+--
+-- DECLARE
+--
+-- BEGIN
+--     INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+--                          BONUS, COMM)
+--     VALUES (222, 'Jenny', 'Bing',000 , 77, DATE'2004-12-05', 'CLERK', 17, 'F', DATE'1994-03-22', 50000, 10000, 500);
+--
+-- END;
+
+
+--QUESTION 7
+--(20%) Write a trigger – _empvac – _which adds a record into a
+-- VACATION table for each EMPLOYEE who is INSERTed or UPDATEed into
+-- the EMPLOYEE table to ensure the difference between the HIREDATE and
+-- CURRENT DATE (SYSDATE) follows these rules:
+-- - If employee was hired < 10 years ago – _they get 3 weeks (15 days)
+-- vacation
+-- - If employee was hired 10-19 years ago – _they get 4 weeks (20 days)
+-- vacation
+-- - If employee was hired 20-29 years ago – _they get 5 weeks (25 days)
+-- vacation
+-- - If employee was hired 30+ years ago – _they get 6 weeks (30 days)
+-- vacation
+-- If a record from the EMPLOYEE table is deleted – _the associated record
+-- from the VACATION table should also be deleted.
 -- The trigger should handle multiple records being INSERTed or UPDATEd
--- or DELETEd into the EMPLOYEE table. Make sure you test multi-record
---     changes.
+-- into the EMPLOYEE table. Make sure you test multi-record changes.
+
+create table VACATION
+(
+    EMPLOYEE_ID        NUMBER(7, 2),
+    EMPLOYEE_FIRSTNAME VARCHAR2(12),
+    EMPLOYEE_LASTNAME  VARCHAR2(15),
+    TRANSACTION        VARCHAR(6),
+    HIRE_DATE          DATE,
+    CURRENT_DATE       DATE,
+    VACATION_LENGTH    NUMBER(7, 2)
+);
+
+CREATE OR REPLACE TRIGGER empvac
+    AFTER
+        INSERT OR UPDATE OR DELETE
+    ON EMPLOYEE
+    FOR EACH ROW
+
+DECLARE
+    transaction_type VARCHAR2(10);
+    emp_id           EMPLOYEE.EMPNO %TYPE;
+    emp_first_name   EMPLOYEE.FIRSTNAME%TYPE;
+    emp_last_name    EMPLOYEE.LASTNAME%TYPE;
+    emp_hire_date    EMPLOYEE.HIREDATE%TYPE;
+    vacation_len     NUMBER(7, 2);
+    emp_hire_year    NUMBER;
+    current_year     NUMBER;
+    NO_DATA EXCEPTION;
+BEGIN
+    transaction_type := CASE
+                            WHEN INSERTING THEN 'INSERT'
+                            WHEN UPDATING THEN 'UPDATE'
+                            WHEN DELETING THEN 'DELETE'
+        END;
+
+    emp_id := :new.EMPNO;
+    emp_first_name := :new.FIRSTNAME;
+    emp_last_name := :new.LASTNAME;
+    emp_hire_date := :new.HIREDATE;
+
+    IF transaction_type = 'INSERT' OR transaction_type = 'UPDATE' THEN
+        emp_hire_year := EXTRACT(YEAR FROM emp_hire_date);
+        current_year := EXTRACT(YEAR FROM SYSDATE);
+
+        IF emp_hire_year = (current_year - 10) THEN
+            vacation_len := 15;
+            DBMS_OUTPUT.PUT_LINE('FIRST CASE: ' || emp_hire_year || CHR(10));
+
+        ELSIF emp_hire_year >= (current_year - 19) AND
+              emp_hire_year <= (current_year - 10) THEN
+            DBMS_OUTPUT.PUT_LINE('SECOND CASE: ' || emp_hire_year || CHR(10));
+            vacation_len := 20;
+        ELSIF emp_hire_year >= (current_year - 29) AND emp_hire_year <= (current_year - 20) THEN
+            vacation_len := 25;
+            DBMS_OUTPUT.PUT_LINE('THIRD CASE: ' || emp_hire_year || CHR(10));
+        ELSIF emp_hire_year <= (current_year - 30) THEN
+            vacation_len := 30;
+            DBMS_OUTPUT.PUT_LINE('FOURTH CASE: ' || emp_hire_year || CHR(10));
+        END IF;
+
+        INSERT INTO VACATION (EMPLOYEE_ID, EMPLOYEE_FIRSTNAME, EMPLOYEE_LASTNAME, TRANSACTION, HIRE_DATE,
+                              "CURRENT_DATE",
+                              VACATION_LENGTH)
+        VALUES (emp_id, emp_first_name, emp_last_name, transaction_type, emp_hire_date, sysdate,
+                vacation_len);
+        RETURN;
+
+    END IF;
+
+    IF transaction_type = 'DELETE' THEN
+        emp_id := :old.EMPNO;
+        DELETE
+        FROM VACATION
+        WHERE EMPLOYEE_ID = emp_id;
+    END IF;
+
+EXCEPTION
+    WHEN
+        OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Oops, something went wrong...');
+END;
+/
+
+
+DECLARE
+
+BEGIN
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (222, 'Jenny', 'Bing', 'A00', 77, DATE'2013-12-05', 'CLERK', 17, 'F', DATE'1994-03-22', 50000, 10000, 500);
+
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (444, 'Sarah', 'Smith', 'C01', 77, DATE'2012-12-05', 'CLERK', 14, 'F', DATE'1992-02-10', 45000, 10000, 9000);
+
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (555, 'Ricky', 'Smith', 'E11', 77, DATE'2003-12-05', 'CLERK', 13, 'M', DATE'1975-04-05', 50000, 500, 500);
+
+    INSERT INTO EMPLOYEE(EMPNO, FIRSTNAME, LASTNAME, WORKDEPT, PHONENO, HIREDATE, JOB, EDLEVEL, SEX, BIRTHDATE, SALARY,
+                         BONUS, COMM)
+    VALUES (777, 'James', 'Ogbomo', 'E11', 77, DATE'1993-12-05', 'CLERK', 13, 'M', DATE'1975-04-05', 50000, 500, 500);
+
+
+    UPDATE EMPLOYEE
+    SET EMPLOYEE.HIREDATE = DATE'2005-12-05'
+    WHERE EMPLOYEE.FIRSTNAME = 'Jenny';
+    COMMIT;
+
+    UPDATE EMPLOYEE
+    SET EMPLOYEE.HIREDATE = DATE'2015-12-05'
+    WHERE EMPLOYEE.FIRSTNAME = 'Sarah';
+    COMMIT;
+
+    UPDATE EMPLOYEE
+    SET EMPLOYEE.HIREDATE = DATE'1991-12-05'
+    WHERE EMPLOYEE.FIRSTNAME = 'James';
+    COMMIT;
+
+    DELETE FROM EMPLOYEE WHERE EMPNO = 222;
+    DELETE FROM EMPLOYEE WHERE EMPNO = 444;
+    DELETE FROM EMPLOYEE WHERE EMPNO = 555;
+    DELETE FROM EMPLOYEE WHERE EMPNO = 777;
+END;
